@@ -464,11 +464,12 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
 
   rowWeight(value) {
     const normalized = this.cleanMarkdownTableCell(value).replace(/\s/g, "");
-    const range = normalized.match(/^(\d+)-(\d+)$/);
+    const range = normalized.match(/^(\d+)[\-\u2013\u2014](\d+)$/);
     if (!range) return 1;
 
     const start = Number.parseInt(range[1], 10);
-    const end = Number.parseInt(range[2], 10);
+    let end = Number.parseInt(range[2], 10);
+    if (end === 0 && start > 0) end = 100;
     if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 1;
     return Math.max(1, end - start + 1);
   }
