@@ -1,0 +1,35 @@
+.rtg-widget {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.rtg-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.rtg-output ol {
+  margin-bottom: 0;
+}
+
+.rtg-error {
+  color: var(--text-error);
+  margin: 0;
+}
+
+.rtg-table-data {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 0.5rem 0.75rem;
+}
+
+.rtg-table-data summary {
+  cursor: pointer;
+}
+
+.rtg-table-data pre {
+  white-space: pre-wrap;
+}

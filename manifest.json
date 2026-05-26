@@ -1,0 +1,10 @@
+{
+  "id": "trolls-in-the-cellar",
+  "name": "Trolls in the Cellar",
+  "version": "0.2.0",
+  "minAppVersion": "1.5.0",
+  "description": "Perchance-style random generators for tabletop RPG prep.",
+  "author": "Local",
+  "isDesktopOnly": false,
+  "authorUrl": "https://troll-tales.ch"
+}
