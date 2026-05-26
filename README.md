@@ -6,8 +6,8 @@ This Obsidian plugin is currently packaged from the local vault prototype.
 
 ## Origin
 
-This plugin began as an Obsidian adaptation of the CC0 generator template from
-Mike Shea's Lazy GM Tools project, specifically:
+This plugin began as an Obsidian adaptation of this CC0 generator template by
+Mike Shea:
 
 https://github.com/mshea/lazy_gm_tools/blob/main/5e_artisanal_database/generators/generator_template/index.html
 
