@@ -275,18 +275,24 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
   }
 
   async collectTablesForGenerator(file, config) {
-    const markdowns = [];
+    const data = {};
 
     for (const sourcePath of config.sources) {
       const sourceFile = this.resolveSourceFile(sourcePath, file.path);
       if (!sourceFile) {
         throw new Error(`Could not find generator source: ${sourcePath}`);
       }
-      markdowns.push(await this.app.vault.read(sourceFile));
+      const sourceData = this.collectTablesFromMarkdown(await this.app.vault.read(sourceFile), sourceFile.basename);
+      this.mergeTableData(data, sourceData);
     }
 
-    markdowns.push(await this.app.vault.read(file));
-    return this.collectTables(markdowns.join("\n\n"));
+    this.mergeTableData(data, this.collectTablesFromMarkdown(await this.app.vault.read(file), file.basename));
+
+    if (Object.keys(data).length === 0) {
+      throw new Error("No troll-food blocks or Markdown dice tables found.");
+    }
+
+    return data;
   }
 
   resolveSourceFile(sourcePath, currentPath) {
@@ -310,7 +316,8 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
     return null;
   }
 
-  collectTables(markdown) {
+  collectTablesFromMarkdown(markdown, pageName) {
+    const data = {};
     const blocks = [];
     const fencedRegex = /```troll-food\s*\n([\s\S]*?)```/g;
     const commentRegex = /%%\s*troll-food\s*\n([\s\S]*?)%%/g;
@@ -324,11 +331,157 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
       blocks.push(match[1]);
     }
 
-    if (blocks.length === 0) {
-      throw new Error("No troll-food block found in this note.");
+    if (blocks.length > 0) {
+      this.mergeTableData(data, this.engine.parse(blocks.join("\n\n")));
     }
 
-    return this.engine.parse(blocks.join("\n\n"));
+    this.mergeTableData(data, this.parseMarkdownDiceTables(markdown, pageName));
+    return data;
+  }
+
+  mergeTableData(target, source) {
+    for (const [key, entries] of Object.entries(source)) {
+      if (!target[key]) target[key] = [];
+      target[key].push(...entries);
+    }
+  }
+
+  parseMarkdownDiceTables(markdown, pageName) {
+    const lines = markdown.split(/\r?\n/);
+    const records = [];
+    const headingStack = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const heading = lines[i].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+      if (heading) {
+        headingStack.length = heading[1].length - 1;
+        const headingName = this.cleanMarkdownTableCell(heading[2]);
+        if (!(heading[1].length === 1 && headingName === pageName)) {
+          headingStack.push(headingName);
+        }
+        continue;
+      }
+
+      if (!this.looksLikeTableStart(lines, i)) continue;
+
+      const tableLines = [];
+      while (i < lines.length && this.isPotentialMarkdownTableRow(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      i--;
+
+      const parsed = this.parseMarkdownTable(tableLines);
+      if (!parsed || parsed.headers.length < 2 || !this.isDiceColumnHeader(parsed.headers[0])) continue;
+
+      const headingPath = headingStack.filter(Boolean).join("/");
+      for (let columnIndex = 1; columnIndex < parsed.headers.length; columnIndex++) {
+        const columnName = this.cleanMarkdownTableCell(parsed.headers[columnIndex]);
+        if (!columnName) continue;
+
+        const entries = [];
+        for (const row of parsed.rows) {
+          const value = this.cleanMarkdownTableCell(row[columnIndex] || "");
+          if (!value) continue;
+
+          const weight = this.rowWeight(row[0] || "");
+          for (let copy = 0; copy < weight; copy++) entries.push(value);
+        }
+
+        if (entries.length === 0) continue;
+
+        const fullKey = headingPath ? `${pageName}/${headingPath}/${columnName}` : `${pageName}/${columnName}`;
+        const aliasKey = `${pageName}/${columnName}`;
+        records.push({ fullKey, aliasKey, entries });
+      }
+    }
+
+    const data = {};
+    const aliasCounts = {};
+    for (const record of records) {
+      aliasCounts[record.aliasKey] = (aliasCounts[record.aliasKey] || 0) + 1;
+      if (!data[record.fullKey]) data[record.fullKey] = [];
+      data[record.fullKey].push(...record.entries);
+    }
+
+    for (const record of records) {
+      if (aliasCounts[record.aliasKey] !== 1 || record.aliasKey === record.fullKey) continue;
+      if (!data[record.aliasKey]) data[record.aliasKey] = [];
+      data[record.aliasKey].push(...record.entries);
+    }
+
+    return data;
+  }
+
+  looksLikeTableStart(lines, index) {
+    return this.isPotentialMarkdownTableRow(lines[index] || "") && this.isMarkdownSeparatorRow(lines[index + 1] || "");
+  }
+
+  parseMarkdownTable(lines) {
+    if (lines.length < 2 || !this.isMarkdownSeparatorRow(lines[1])) return null;
+
+    const headers = this.splitMarkdownTableRow(lines[0]);
+    const rows = [];
+    for (let i = 2; i < lines.length; i++) {
+      if (this.isMarkdownSeparatorRow(lines[i])) continue;
+      const row = this.splitMarkdownTableRow(lines[i]);
+      while (row.length < headers.length) row.push("");
+      rows.push(row);
+    }
+
+    return { headers, rows };
+  }
+
+  splitMarkdownTableRow(line) {
+    return line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  }
+
+  isMarkdownSeparatorRow(line) {
+    if (!this.isPotentialMarkdownTableRow(line)) return false;
+    const cells = this.splitMarkdownTableRow(line);
+    return cells.length > 0 && cells.every((cell) => /^:?-{1,}:?$/.test(cell.trim()));
+  }
+
+  isPotentialMarkdownTableRow(line) {
+    return /\|/.test(line || "");
+  }
+
+  isDiceColumnHeader(header) {
+    const normalized = this.cleanMarkdownTableCell(header).toLowerCase();
+    return (
+      /^d\d+(?:\s*\+\s*d\d+)*$/.test(normalized) ||
+      /^\d+d\d+$/.test(normalized) ||
+      /^dice\s*:?\s*\d*d?\d+$/.test(normalized) ||
+      /\bd\d+\b/.test(normalized) && /\broll\b/.test(normalized) ||
+      normalized === "roll"
+    );
+  }
+
+  rowWeight(value) {
+    const normalized = this.cleanMarkdownTableCell(value).replace(/\s/g, "");
+    const range = normalized.match(/^(\d+)-(\d+)$/);
+    if (!range) return 1;
+
+    const start = Number.parseInt(range[1], 10);
+    const end = Number.parseInt(range[2], 10);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 1;
+    return Math.max(1, end - start + 1);
+  }
+
+  cleanMarkdownTableCell(value) {
+    return value
+      .trim()
+      .replace(/`?dice\+?:\s*\[\[[^\]#]+#\^([^\]\|]+)(?:\|[^\]]*)?\]\]`?/g, "{$1}")
+      .replace(/\*\*/g, "")
+      .replace(/^`|`$/g, "")
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   extractFirstGeneratorConfig(markdown) {

@@ -133,6 +133,57 @@ count: 6
 `source:` and `sources:` accept wikilinks or vault-relative paths. Comma-separated
 source lists are also supported.
 
+## Markdown Dice Tables
+
+Readable Markdown tables can also feed generators. If a Markdown table's first
+header cell looks like a dice or roll column, Trolls in the Cellar turns every
+other column into a rollable table.
+
+```markdown
+## Character Goals
+
+| d20 | Objective | Reason | Complication |
+| --- | --------- | ------ | ------------ |
+| 1   | Recover an heirloom | A debt is owed | A rival wants it too |
+| 2-3 | Escort a witness | They know too much | The witness is lying |
+```
+
+From a note named `Character Seeds`, this creates:
+
+```text
+{Character Seeds/Character Goals/Objective}
+{Character Seeds/Character Goals/Reason}
+{Character Seeds/Character Goals/Complication}
+```
+
+If a column name is unique within the page, a shorter page-level alias is also
+available:
+
+```text
+{Character Seeds/Objective}
+```
+
+Ranges in the dice column weight entries. In the example above, the `2-3` row is
+twice as likely as the `1` row.
+
+Columns are exposed as independent roll tables. If you combine several columns
+in one `troll-food` template, each column is rolled separately.
+
+For compatibility with existing notes, Dice Roller links inside Markdown table
+cells are interpreted as Trolls table references at roll time. This is useful
+when imported Markdown tables already contain references to other roll tables.
+For example:
+
+```text
+`dice: [[MazeRatsTables#^PhysicalEffects]]`
+```
+
+is interpreted as:
+
+```text
+{PhysicalEffects}
+```
+
 ## Installation
 
 This plugin is not yet published as an Obsidian community plugin.
