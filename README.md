@@ -4,7 +4,7 @@ Perchance-style random generators, written as plain Markdown, directly inside
 Obsidian.
 
 Trolls in the Cellar turns notes into small creative engines. Write named
-tables in a `random-table` block, add a `generator` block, and Obsidian renders
+tables in a `troll-food` block, add a `troll-speak` block, and Obsidian renders
 an interactive roller with copyable results in Reading view. It is built for
 tabletop RPG prep, but the format is plain enough for names, rumors, omens,
 loot, locations, prompts, and anything else that benefits from structured
@@ -15,7 +15,7 @@ randomness.
 ````markdown
 # Trap Generator
 
-```random-table
+```troll-food
 template
   {element} {trap} triggered by {trigger}
 
@@ -35,19 +35,19 @@ trigger
   a jeweled skull
 ```
 
-```generator
+```troll-speak
 table: template
 count: 5
 format: list
 ```
 ````
 
-In Reading view, the `generator` block becomes a roller with **Roll** and
+In Reading view, the `troll-speak` block becomes a roller with **Roll** and
 **Copy** buttons.
 
-## Generator Blocks
+## Troll Speak Blocks
 
-Use a fenced `generator` block to configure what gets rolled.
+Use a fenced `troll-speak` block to configure what gets rolled.
 
 ```text
 table: template
@@ -60,11 +60,11 @@ Supported options:
 - `table`: the table to roll, defaulting to `template`
 - `count`: number of results to generate, from 1 to 100
 - `format`: `list` or `paragraph`
-- `source` / `sources`: extra notes containing reusable `random-table` blocks
+- `source` / `sources`: extra notes containing reusable `troll-food` blocks
 
 The plugin also adds the command **Roll current note generator**, which rolls the
-first `generator` block in the active note, copies the result, and shows it in a
-notice.
+first `troll-speak` block in the active note, copies the result, and shows it in
+a notice.
 
 ## Table Syntax
 
@@ -101,7 +101,7 @@ simple.
 For small generators, keep table data in the same note:
 
 ````markdown
-```random-table
+```troll-food
 template
   {thing}
 
@@ -114,7 +114,7 @@ thing
 For large libraries, hide backing tables in Obsidian comments:
 
 ```text
-%% random-table
+%% troll-food
 template
   {thing}
 %%

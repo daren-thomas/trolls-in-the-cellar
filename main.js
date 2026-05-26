@@ -181,11 +181,11 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
   async onload() {
     this.engine = new GeneratorEngine();
 
-    this.registerMarkdownCodeBlockProcessor("generator", async (source, el, ctx) => {
+    this.registerMarkdownCodeBlockProcessor("troll-speak", async (source, el, ctx) => {
       await this.renderGeneratorBlock(source, el, ctx);
     });
 
-    this.registerMarkdownCodeBlockProcessor("random-table", (source, el) => {
+    this.registerMarkdownCodeBlockProcessor("troll-food", (source, el) => {
       this.renderTableDataBlock(source, el);
     });
 
@@ -312,8 +312,8 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
 
   collectTables(markdown) {
     const blocks = [];
-    const fencedRegex = /```random-table\s*\n([\s\S]*?)```/g;
-    const commentRegex = /%%\s*random-table\s*\n([\s\S]*?)%%/g;
+    const fencedRegex = /```troll-food\s*\n([\s\S]*?)```/g;
+    const commentRegex = /%%\s*troll-food\s*\n([\s\S]*?)%%/g;
     let match;
 
     while ((match = fencedRegex.exec(markdown)) !== null) {
@@ -325,14 +325,14 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
     }
 
     if (blocks.length === 0) {
-      throw new Error("No random-table block found in this note.");
+      throw new Error("No troll-food block found in this note.");
     }
 
     return this.engine.parse(blocks.join("\n\n"));
   }
 
   extractFirstGeneratorConfig(markdown) {
-    const match = markdown.match(/```generator\s*\n([\s\S]*?)```/);
+    const match = markdown.match(/```troll-speak\s*\n([\s\S]*?)```/);
     return this.parseGeneratorConfig(match ? match[1] : "");
   }
 
