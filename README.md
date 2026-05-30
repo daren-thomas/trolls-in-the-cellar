@@ -186,16 +186,20 @@ is interpreted as:
 
 ## Installation
 
-This plugin is not yet published as an Obsidian community plugin.
+Trolls in the Cellar is available in the Obsidian community plugin directory.
+In Obsidian, open **Settings → Community plugins → Browse**, search for
+**Trolls in the Cellar**, install it, and enable it. You can also install it
+from the
+[community listing](https://community.obsidian.md/plugins/trolls-in-the-cellar).
 
-During development, install it with
+To track pre-release builds, install it with
 [BRAT](https://github.com/TfTHacker/obsidian42-brat) by adding this repository:
 
 ```text
 daren-thomas/trolls-in-the-cellar
 ```
 
-For manual testing, copy `main.js`, `manifest.json`, and `styles.css` into:
+For manual installation, copy `main.js`, `manifest.json`, and `styles.css` into:
 
 ```text
 .obsidian/plugins/trolls-in-the-cellar/
