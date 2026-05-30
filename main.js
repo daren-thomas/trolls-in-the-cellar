@@ -1,3 +1,12 @@
+/*
+ * Trolls in the Cellar — Perchance-style random generators for Obsidian.
+ *
+ * Released under CC0 1.0 Universal (public domain dedication). See LICENSE.
+ *
+ * Adapted from Mike Shea's CC0 generator template:
+ * https://github.com/mshea/lazy_gm_tools/blob/main/5e_artisanal_database/generators/generator_template/index.html
+ * See NOTICE.md for source links and licensing notes.
+ */
 const { Notice, Plugin } = require("obsidian");
 
 class GeneratorEngine {
