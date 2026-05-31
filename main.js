@@ -400,23 +400,31 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
         if (entries.length === 0) continue;
 
         const fullKey = headingPath ? `${pageName}/${headingPath}/${columnName}` : `${pageName}/${columnName}`;
-        const aliasKey = `${pageName}/${columnName}`;
-        records.push({ fullKey, aliasKey, entries });
+        const pageAliasKey = `${pageName}/${columnName}`;
+        const localAliasKey = columnName;
+        records.push({ fullKey, pageAliasKey, localAliasKey, entries });
       }
     }
 
     const data = {};
-    const aliasCounts = {};
+    const pageAliasCounts = {};
+    const localAliasCounts = {};
     for (const record of records) {
-      aliasCounts[record.aliasKey] = (aliasCounts[record.aliasKey] || 0) + 1;
+      pageAliasCounts[record.pageAliasKey] = (pageAliasCounts[record.pageAliasKey] || 0) + 1;
+      localAliasCounts[record.localAliasKey] = (localAliasCounts[record.localAliasKey] || 0) + 1;
       if (!data[record.fullKey]) data[record.fullKey] = [];
       data[record.fullKey].push(...record.entries);
     }
 
     for (const record of records) {
-      if (aliasCounts[record.aliasKey] !== 1 || record.aliasKey === record.fullKey) continue;
-      if (!data[record.aliasKey]) data[record.aliasKey] = [];
-      data[record.aliasKey].push(...record.entries);
+      if (pageAliasCounts[record.pageAliasKey] === 1 && record.pageAliasKey !== record.fullKey) {
+        if (!data[record.pageAliasKey]) data[record.pageAliasKey] = [];
+        data[record.pageAliasKey].push(...record.entries);
+      }
+
+      if (localAliasCounts[record.localAliasKey] !== 1) continue;
+      if (!data[record.localAliasKey]) data[record.localAliasKey] = [];
+      data[record.localAliasKey].push(...record.entries);
     }
 
     return data;

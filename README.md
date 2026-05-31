@@ -43,7 +43,9 @@ format: list
 ````
 
 In Reading view, the `troll-speak` block becomes a roller with **Roll** and
-**Copy** buttons.
+**Copy** buttons. The interactive widget currently targets Reading view. In
+editing mode, use the command **Roll current note generator** if you want to
+roll without switching views.
 
 ## Troll Speak Blocks
 
@@ -161,6 +163,13 @@ available:
 
 ```text
 {Character Seeds/Objective}
+```
+
+If a column name is unique within the note, a bare local alias is also
+available:
+
+```text
+{Objective}
 ```
 
 Ranges in the dice column weight entries. In the example above, the `2-3` row is
