@@ -1,0 +1,37 @@
+name: Release Obsidian plugin
+
+# Publishes a GitHub Release and attaches the plugin assets whenever a version
+# tag (e.g. 0.2.4) is pushed. The Obsidian community-plugins review bot requires
+# main.js and manifest.json to be attached as release ASSETS — committing them to
+# the repo is not enough. styles.css is included because this plugin ships one.
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify manifest version matches the tag
+        run: |
+          manifest_version="$(jq -r .version manifest.json)"
+          if [ "$manifest_version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::manifest.json version ($manifest_version) does not match tag ($GITHUB_REF_NAME)"
+            exit 1
+          fi
+
+      - name: Create release with plugin assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            main.js manifest.json styles.css
