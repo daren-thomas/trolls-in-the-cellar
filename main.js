@@ -7,7 +7,7 @@
  * https://github.com/mshea/lazy_gm_tools/blob/main/5e_artisanal_database/generators/generator_template/index.html
  * See NOTICE.md for source links and licensing notes.
  */
-const { Notice, Plugin } = require("obsidian");
+const { Notice, Plugin, Component, MarkdownRenderer } = require("obsidian");
 
 class GeneratorEngine {
   parse(text) {
@@ -28,16 +28,20 @@ class GeneratorEngine {
       const trimmed = line.trim();
       const weightMatch = trimmed.match(/^(.+?)\s*\^(\d+)$/);
       if (!weightMatch) {
-        result[currentKey].push(trimmed);
+        result[currentKey].push(this.unescape(trimmed));
         continue;
       }
 
-      const item = weightMatch[1];
+      const item = this.unescape(weightMatch[1]);
       const weight = Number.parseInt(weightMatch[2], 10);
       for (let i = 0; i < weight; i++) result[currentKey].push(item);
     }
 
     return result;
+  }
+
+  unescape(text) {
+    return text.replace(/\\n/g, "\n");
   }
 
   roll(data, tableName = "template") {
@@ -46,10 +50,19 @@ class GeneratorEngine {
       throw new Error(`Missing random table: ${tableName}`);
     }
 
-    return this.fill(this.pick(table), data);
+    const result = this.expand(this.pick(table), data, {});
+    return this.capitalize(result);
+  }
+
+  capitalize(text) {
+    return text.replace(/^((?:<[^>]*>|[^A-Za-z0-9<])*)([a-z])/, (_match, lead, letter) => lead + letter.toUpperCase());
   }
 
   fill(template, data) {
+    return this.expand(template, data, {});
+  }
+
+  expand(template, data, bindings) {
     let result = template;
 
     for (let i = 0; i < 10 && (result.includes("{") || result.includes("[[")); i++) {
@@ -58,11 +71,11 @@ class GeneratorEngine {
       result = this.processDoubleBraceChoices(result, data);
       result = this.processSingleBraceChoices(result, data);
       result = this.processQuantityPatterns(result, data);
-      result = this.processTableReferences(result, data);
+      result = this.processTableReferences(result, data, bindings);
       if (result === before) break;
     }
 
-    return result.charAt(0).toUpperCase() + result.slice(1);
+    return result;
   }
 
   pick(list) {
@@ -156,9 +169,25 @@ class GeneratorEngine {
     });
   }
 
-  processTableReferences(text, data) {
-    return text.replace(/{(.*?)}/g, (match, key) => {
-      const table = data[key.trim()];
+  processTableReferences(text, data, bindings = {}) {
+    return text.replace(/{(.*?)}/g, (match, rawKey) => {
+      const key = rawKey.trim();
+
+      const asMatch = key.match(/^(.+?)\s+as\s+([A-Za-z][\w-]*)$/);
+      if (asMatch) {
+        const tableName = asMatch[1].trim();
+        const bindName = asMatch[2].trim();
+        const table = data[tableName];
+        if (!table || table.length === 0) return match;
+
+        const value = this.expand(this.pick(table), data, bindings);
+        bindings[bindName] = value;
+        return value;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(bindings, key)) return bindings[key];
+
+      const table = data[key];
       return table && table.length > 0 ? this.pick(table) : match;
     });
   }
@@ -251,6 +280,9 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
     el.empty();
     el.addClass("rtg-widget");
 
+    const component = new Component();
+    ctx.addChild(component);
+
     const controls = el.createDiv({ cls: "rtg-controls" });
     const rollButton = controls.createEl("button", { text: "Roll" });
     const copyButton = controls.createEl("button", { text: "Copy" });
@@ -258,7 +290,7 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
 
     let latest = [];
 
-    const roll = () => {
+    const roll = async () => {
       try {
         latest = [];
         output.empty();
@@ -267,7 +299,7 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
           latest.push(this.engine.roll(data, config.table));
         }
 
-        this.renderResults(output, latest, config.format);
+        await this.renderResults(output, latest, config, ctx.sourcePath, component);
       } catch (error) {
         this.renderError(output, error.message);
       }
@@ -512,6 +544,7 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
       table: "template",
       count: 1,
       format: "list",
+      markdown: false,
       sources: [],
     };
     let activeListKey = null;
@@ -542,6 +575,7 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
         if (Number.isFinite(count)) config.count = Math.max(1, Math.min(count, 100));
       }
       if (key === "format" && ["list", "paragraph"].includes(value)) config.format = value;
+      if (key === "markdown") config.markdown = ["true", "yes", "on", "1"].includes(value.trim().toLowerCase());
     }
 
     return config;
@@ -582,16 +616,29 @@ module.exports = class RandomTableGeneratorPlugin extends Plugin {
     return sources;
   }
 
-  renderResults(container, results, format) {
+  async renderResults(container, results, config, sourcePath, component) {
     container.empty();
 
-    if (format === "paragraph") {
-      for (const result of results) container.createEl("p", { text: result });
-      return;
-    }
+    const list = config.format === "paragraph" ? null : container.createEl("ol");
 
-    const list = container.createEl("ol");
-    for (const result of results) list.createEl("li", { text: result });
+    for (const result of results) {
+      const host = list ? list.createEl("li") : container.createEl("p");
+
+      if (config.markdown) {
+        await MarkdownRenderer.render(this.app, result, host, sourcePath || "", component);
+        this.unwrapParagraph(host);
+      } else {
+        host.setText(result);
+      }
+    }
+  }
+
+  unwrapParagraph(el) {
+    if (el.childElementCount !== 1 || el.firstElementChild.tagName !== "P") return;
+
+    const paragraph = el.firstElementChild;
+    while (paragraph.firstChild) el.insertBefore(paragraph.firstChild, paragraph);
+    paragraph.remove();
   }
 
   renderError(container, message) {

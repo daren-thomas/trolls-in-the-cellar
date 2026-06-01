@@ -62,7 +62,20 @@ Supported options:
 - `table`: the table to roll, defaulting to `template`
 - `count`: number of results to generate, from 1 to 100
 - `format`: `list` or `paragraph`
+- `markdown`: `true` to render results as Markdown (bold, italics, links, inline
+  HTML); defaults to `false`, which shows results as plain text
 - `source` / `sources`: extra notes containing reusable `troll-food` blocks
+
+When `markdown: true`, you can style the template itself and the formatting is
+rendered in the result:
+
+```text
+template
+  There's a **{enemy as villain}** lurking in *{location}*.
+```
+
+Markdown special characters in your tables (`*`, `_`, `[[ ]]`, `<b>`) only take
+effect when the flag is on, so existing plain-text generators are unaffected.
 
 The plugin also adds the command **Roll current note generator**, which rolls the
 first `troll-speak` block in the active note, copies the result, and shows it in
@@ -93,6 +106,24 @@ Supported syntax:
 - `{{table_a}|{table_b}}` chooses between table results
 - `{"common"|"rare" ^4}` gives extra weight to the last option
 - `3 x {table}` rolls a table multiple times and joins the results
+- `{table as name}` rolls a table once and remembers the result as `name`
+- `{name}` reuses a remembered result, so the same roll appears again
+- `\n` inserts a line break inside an entry; use `\n\n` for a paragraph break
+  (most useful with `markdown: true`, where it renders as real paragraphs)
+
+By default every `{table}` reference rolls independently, so repeating
+`{enemy}` in one template gives a different enemy each time. To reuse the same
+rolled value, bind it once with `as` and then reference the bound name:
+
+```text
+template
+  There's a {enemy as villain} near {location}. Defeat the {villain} to win.
+```
+
+Both mentions of `{villain}` resolve to the same enemy, while `{location}`
+still rolls on its own. Bindings last for a single result, so each generated
+entry gets its own remembered values. A `{name}` that was never bound is left
+untouched, just like an unknown table reference.
 
 The engine is intentionally small and practical. It uses repeated expansion
 passes with a recursion limit, so deeply nested generator syntax should stay
